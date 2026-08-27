@@ -1,1 +1,7 @@
+Security Monitoring File
 
+Author: Mahmoud Ayman
+
+This file is used for integrity monitoring tests.
+
+Version: 1.0
