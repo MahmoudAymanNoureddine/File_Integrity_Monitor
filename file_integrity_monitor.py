@@ -1,13 +1,5 @@
 import hashlib
 import os
-from datetime import datetime
-
-
-def calculate_hash(filename):
-
-    with open(filename, "rb") as file:
-        return hashlib.sha256(file.read()).hexdigest()
-
 
 files_to_monitor = [
     "sample_file.txt",
@@ -15,94 +7,86 @@ files_to_monitor = [
     "security.log"
 ]
 
-baseline_file = "baseline_hashes.txt"
+BASELINE_FILE = "baseline_hashes.txt"
 
-current_hashes = {}
+# ==========================
+# Generate SHA256 Hash
+# ==========================
+def get_file_hash(file_name):
 
-for filename in files_to_monitor:
+    with open(file_name, "rb") as file:
+        data = file.read()
 
-    if os.path.exists(filename):
-        current_hashes[filename] = calculate_hash(filename)
+    return hashlib.sha256(data).hexdigest()
 
 
-# First Run (Create Baseline)
-if not os.path.exists(baseline_file):
+# ==========================
+# Create Baseline
+# ==========================
+if not os.path.exists(BASELINE_FILE):
 
-    with open(baseline_file, "w") as file:
+    print("Creating Baseline Hashes...\n")
 
-        for filename, file_hash in current_hashes.items():
-            file.write(f"{filename}|{file_hash}\n")
+    baseline = open(BASELINE_FILE, "w")
 
-    print("Baseline hashes created successfully.")
-    print("Run the program again to start monitoring.")
+    for file_name in files_to_monitor:
 
+        file_hash = get_file_hash(file_name)
+
+        baseline.write(f"{file_name}:{file_hash}\n")
+
+        print(f"Baseline Saved -> {file_name}")
+
+    baseline.close()
+
+    print("\nBaseline Created Successfully.")
+    print("Run the program again for monitoring.")
+
+# ==========================
+# Monitoring Mode
+# ==========================
 else:
 
     baseline_hashes = {}
 
-    with open(baseline_file, "r") as file:
+    baseline = open(BASELINE_FILE, "r")
 
-        for line in file:
+    for line in baseline:
 
-            filename, file_hash = line.strip().split("|")
+        file_name, file_hash = line.strip().split(":")
+        baseline_hashes[file_name] = file_hash
 
-            baseline_hashes[filename] = file_hash
+    baseline.close()
 
     modified_files = 0
 
     print("\nFILE INTEGRITY MONITOR")
-    print("=" * 60)
+    print("=" * 50)
 
-    print("Scan Time :", datetime.now())
+    for file_name in files_to_monitor:
 
-    print("=" * 60)
+        current_hash = get_file_hash(file_name)
 
-    for filename in files_to_monitor:
+        print(f"\nFile: {file_name}")
 
-        print(f"\nFile: {filename}")
-
-        if not os.path.exists(filename):
-
-            print("Risk Level : HIGH")
-            print("ALERT : File Missing")
-
-            modified_files += 1
-
-            continue
-
-        current_hash = current_hashes[filename]
-
-        baseline_hash = baseline_hashes.get(filename)
-
-        file_size = os.path.getsize(filename)
-
-        print(f"Size : {file_size} Bytes")
-
-        if current_hash == baseline_hash:
-
-            print("Status : VERIFIED")
-            print("Risk Level : LOW")
+        if current_hash == baseline_hashesprint("Status : SAFE")
 
         else:
-
             print("Status : MODIFIED")
-            print("Risk Level : HIGH")
-            print("ALERT : File Integrity Compromised")
-
             modified_files += 1
 
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 50)
 
-    print("Modified Files :", modified_files)
+    print("Files Checked :", len(files_to_monitor))
+    print("Modified Files:", modified_files)
 
-    if modified_files > 0:
+    print("=" * 50)
 
-        print("Overall Risk Level : HIGH")
-        print("Recommendation : Immediate Investigation Required")
+    if modified_files == 0:
+        print("Risk Level : LOW")
+
+    elif modified_files == 1:
+        print("Risk Level : MEDIUM")
 
     else:
-
-        print("Overall Risk Level : LOW")
-        print("Recommendation : Continue Monitoring")
-
-    print("=" * 60)
+        print("Risk Level : HIGH")
