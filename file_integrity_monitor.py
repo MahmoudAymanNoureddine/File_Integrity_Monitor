@@ -1,5 +1,6 @@
 import hashlib
 import os
+import json
 from datetime import datetime
 
 
@@ -8,64 +9,62 @@ def calculate_hash(filename):
         return hashlib.sha256(file.read()).hexdigest()
 
 
-def load_baseline(baseline_file):
-    baseline_hashes = {}
+files_to_monitor = [
+    "sample_file.txt",
+    "config.txt",
+    "security.log"
+]
 
-    if os.path.exists(baseline_file):
+baseline_file = "baseline_hashes.txt"
 
-        with open(baseline_file, "r") as file:
+current_hashes = {}
 
-            for line in file:
+for filename in files_to_monitor:
 
-                filename, file_hash = line.strip().split("|")
-                baseline_hashes[filename] = file_hash
-
-    return baseline_hashes
+    if os.path.exists(filename):
+        current_hashes[filename] = calculate_hash(filename)
 
 
-def create_baseline(baseline_file, current_hashes):
+# Create Baseline
+if not os.path.exists(baseline_file):
 
     with open(baseline_file, "w") as file:
 
         for filename, file_hash in current_hashes.items():
             file.write(f"{filename}|{file_hash}\n")
 
-    print("\nBaseline hashes created successfully.")
+    print("Baseline created successfully.")
     print("Run the program again to start monitoring.")
 
+else:
 
-def monitor_files():
+    baseline_hashes = {}
 
-    files_to_monitor = [
-        "sample_file.txt",
-        "config.txt",
-        "security.log"
-    ]
+    with open(baseline_file, "r") as file:
 
-    baseline_file = "baseline_hashes.txt"
+        for line in file:
 
-    current_hashes = {}
+            filename, file_hash = line.strip().split("|")
 
-    for filename in files_to_monitor:
+            baseline_hashes[filename] = file_hash
 
-        if os.path.exists(filename):
-            current_hashes[filename] = calculate_hash(filename)
-
-    if not os.path.exists(baseline_file):
-
-        create_baseline(baseline_file, current_hashes)
-        return
-
-    baseline_hashes = load_baseline(baseline_file)
+    scan_time = str(datetime.now())
 
     modified_files = 0
+    missing_files = 0
+
+    report_lines = []
+    json_report = []
 
     print("\nFILE INTEGRITY MONITOR")
-    print("=" * 60)
+    print("=" * 70)
+    print("Scan Time :", scan_time)
+    print("=" * 70)
 
-    print("Scan Time :", datetime.now())
-
-    print("=" * 60)
+    report_lines.append("FILE INTEGRITY MONITOR")
+    report_lines.append("=" * 70)
+    report_lines.append(f"Scan Time : {scan_time}")
+    report_lines.append("=" * 70)
 
     for filename in files_to_monitor:
 
@@ -73,11 +72,20 @@ def monitor_files():
 
         if not os.path.exists(filename):
 
-            print("Status : MISSING")
-            print("Risk Level : HIGH")
-            print("ALERT : File Missing")
+            print("Status      : MISSING")
+            print("Risk Level  : HIGH")
+            print("Alert       : File Missing")
 
             modified_files += 1
+            missing_files += 1
+
+            json_report.append({
+                "file": filename,
+                "status": "MISSING",
+                "risk_level": "HIGH",
+                "timestamp": scan_time
+            })
+
             continue
 
         current_hash = current_hashes[filename]
@@ -85,42 +93,92 @@ def monitor_files():
 
         file_size = os.path.getsize(filename)
 
-        print("Size :", file_size, "Bytes")
+        print("Size        :", file_size, "Bytes")
+        print("Current Hash:", current_hash)
 
         if current_hash == baseline_hash:
 
-            print("Status : VERIFIED")
-            print("Risk Level : LOW")
+            status = "VERIFIED"
+            risk_level = "LOW"
+
+            print("Status      :", status)
+            print("Risk Level  :", risk_level)
 
         else:
 
-            print("Status : MODIFIED")
-            print("Risk Level : HIGH")
-            print("ALERT : File Integrity Compromised")
+            status = "MODIFIED"
+            risk_level = "HIGH"
+
+            print("Status      :", status)
+            print("Risk Level  :", risk_level)
+            print("Alert       : File Integrity Compromised")
+
+            print("\nPrevious Hash:")
+            print(baseline_hash)
+
+            print("\nCurrent Hash:")
+            print(current_hash)
 
             modified_files += 1
 
-    print("\n" + "=" * 60)
+        report_lines.append(f"\nFile: {filename}")
+        report_lines.append(f"Status: {status}")
+        report_lines.append(f"Risk Level: {risk_level}")
 
-    print("Modified Files :", modified_files)
+        json_report.append({
+            "file": filename,
+            "status": status,
+            "risk_level": risk_level,
+            "previous_hash": baseline_hash,
+            "current_hash": current_hash,
+            "timestamp": scan_time
+        })
+
+    print("\n" + "=" * 70)
+
+    print("SCAN SUMMARY")
+
+    print("=" * 70)
+
+    print("Files Monitored :", len(files_to_monitor))
+    print("Modified Files  :", modified_files)
+    print("Missing Files   :", missing_files)
 
     if modified_files > 0:
 
-        print("Overall Risk Level : HIGH")
-        print("Recommendation : Immediate Investigation Required")
+        overall_risk = "HIGH"
+        recommendation = "Immediate Investigation Required"
 
     else:
 
-        print("Overall Risk Level : LOW")
-        print("Recommendation : Continue Monitoring")
+        overall_risk = "LOW"
+        recommendation = "Continue Monitoring"
 
-    print("=" * 60)
+    print("\nOverall Risk Level :", overall_risk)
+    print("Recommendation     :", recommendation)
 
+    print("=" * 70)
 
-try:
+    report_lines.append("\nSCAN SUMMARY")
+    report_lines.append(f"Files Monitored: {len(files_to_monitor)}")
+    report_lines.append(f"Modified Files: {modified_files}")
+    report_lines.append(f"Missing Files: {missing_files}")
+    report_lines.append(f"Overall Risk Level: {overall_risk}")
+    report_lines.append(f"Recommendation: {recommendation}")
 
-    monitor_files()
+    # Save Text Report
+    with open("security_report.txt", "w") as file:
 
-except Exception as error:
+        for line in report_lines:
+            file.write(line + "\n")
 
-    print("Unexpected Error:", error)
+    # Save JSON Report
+    with open("security_report.json", "w") as file:
+
+        json.dump(json_report, file, indent=4)
+
+    print("\nSecurity Report Saved:")
+    print("security_report.txt")
+
+    print("\nJSON Report Saved:")
+    print("security_report.json")
