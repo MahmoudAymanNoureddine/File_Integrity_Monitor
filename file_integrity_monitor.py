@@ -1,4 +1,15 @@
 import hashlib
+import os
+from datetime import datetime
+
+
+def calculate_hash(filename):
+
+    with open(filename, "rb") as file:
+        content = file.read()
+
+    return hashlib.sha256(content).hexdigest()
+
 
 files_to_monitor = [
     "sample_file.txt",
@@ -6,51 +17,40 @@ files_to_monitor = [
     "security.log"
 ]
 
-print("FILE INTEGRITY MONITOR")
+print("\nFILE INTEGRITY MONITOR")
 print("=" * 60)
 
-baseline_hashes = {}
+print("Scan Time:", datetime.now())
 
-baseline_file = open("baseline_hashes.txt", "r")
+print("=" * 60)
 
-for line in baseline_file:
-    file_name, file_hash = line.strip().split(":")
-    baseline_hashes[file_name] = file_hash
+for filename in files_to_monitor:
 
-baseline_file.close()
+    if os.path.exists(filename):
 
-modified_files = 0
+        file_hash = calculate_hash(filename)
 
-for file_name in files_to_monitor:
+        print(f"\nFile: {filename}")
+        print(f"SHA256: {file_hash}")
 
-    file = open(file_name, "rb")
+        file_size = os.path.getsize(filename)
 
-    data = file.read()
+        print(f"Size: {file_size} Bytes")
 
-    current_hash = hashlib.sha256(data).hexdigest()
+        if file_size == 0:
+            print("Risk Level: HIGH")
+            print("ALERT: Empty File Detected")
 
-    file.close()
-
-    print(f"\nFile: {file_name}")
-
-    if current_hash == baseline_hashesprint("Status : SAFE")
+        else:
+            print("Risk Level: LOW")
+            print("Status: File Integrity Verified")
 
     else:
-        print("Status : MODIFIED")
-        modified_files += 1
+
+        print(f"\nFile: {filename}")
+        print("Risk Level: HIGH")
+        print("ALERT: File Missing")
 
 print("\n" + "=" * 60)
-
-print("Files Checked :", len(files_to_monitor))
-print("Modified Files:", modified_files)
-
+print("Integrity Scan Completed")
 print("=" * 60)
-
-if modified_files == 0:
-    print("Risk Level : LOW")
-
-elif modified_files == 1:
-    print("Risk Level : MEDIUM")
-
-else:
-    print("Risk Level : HIGH")
