@@ -1,39 +1,23 @@
 import hashlib
 
+files_to_monitor = [
+    "sample_file.txt",
+    "config.txt",
+    "security.log"
+]
 
-def calculate_hash(filename):
-
-    file = open(filename, "rb")
-
-    content = file.read()
-
-    file.close()
-
-    return hashlib.sha256(content).hexdigest()
-
-
-baseline_hash = calculate_hash("sample_file.txt")
-
-print("\nFILE INTEGRITY MONITOR")
+print("FILE INTEGRITY MONITOR")
 print("=" * 50)
 
-print("Baseline Hash:")
-print(baseline_hash)
+for file_name in files_to_monitor:
 
-print("\nModify the file and press Enter to continue...")
-input()
+    file = open(file_name, "rb")
 
-current_hash = calculate_hash("sample_file.txt")
+    data = file.read()
 
-print("\nCurrent Hash:")
-print(current_hash)
+    file_hash = hashlib.sha256(data).hexdigest()
 
-print("\n" + "=" * 50)
+    print(f"\nFile: {file_name}")
+    print(f"SHA256: {file_hash}")
 
-if baseline_hash == current_hash:
-
-    print("STATUS : FILE INTEGRITY VERIFIED")
-
-else:
-
-    print("WARNING : FILE INTEGRITY COMPROMISED")
+    file.close()
